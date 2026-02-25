@@ -1,29 +1,29 @@
-from pathlib import PurePath, Path, PurePosixPath, PureWindowsPath
-from copy import copy, deepcopy
+from pathlib import PurePath, Path
+from copy import deepcopy
 
 
-PACK_TAG_info = 'info'
-PACK_TAG_type = 'type'
-PACK_TAG_name = 'name'
-PACK_TAG_subFiles = 'subFiles'
-PACK_TAG_TYPE_File = 'File'
-PACK_TAG_TYPE_Dir = 'Dir'
-PACK_TAG_fs_type = 'FsType'
-PACK_TAG_fileTree = 'FileTree'
-PACK_TAG_FS_TYPE_normal = 'normal'
-PACK_TAG_FS_TYPE_single = 'single'
+PACK_TAG_INFO = 'info'
+PACK_TAG_TYPE = 'type'
+PACK_TAG_NAME = 'name'
+PACK_TAG_SUBFILES = 'subFiles'
+PACK_TAG_TYPE_FILE = 'File'
+PACK_TAG_TYPE_DIR = 'Dir'
+PACK_TAG_FS_TYPE = 'FsType'
+PACK_TAG_FILE_TREE = 'FileTree'
+# PACK_TAG_FS_TYPE_NORMAL = 'normal'
+# PACK_TAG_FS_TYPE_SINGLE = 'single'
+
+NAME_ROOT_DIR = '/'
 
 class FsError(Exception): pass
+
 ERROR_NOT_EXIST = 'ERROR_not_exist'
 ERROR_ALREADY_EXIST = 'ERROR_already_exist'
 ERROR_IS_ROOT_PATH = 'ERROR_is_root_path'
 ERROR_TYPE_ERROR = 'ERROR_type_error'
 ERROR_ILLEGAL_FILE_NAME = 'ERROR_illegal_fileName'
 ERROR_CANNOT_MOVE_INTO_ITSELF = 'ERROR_cannot_move_into_itself'
-ERROR_IS_NOT_DIR = 'ERROR_is_not_dir' # 仅在Single中使用
-
-NAME_rootDir = '/'
-
+# ERROR_IS_NOT_DIR = 'ERROR_is_not_dir' # 仅在Single中使用
 
 
 # 会忽略“/”，“./”，Windows驱动器号等，不会忽略“..”
@@ -60,7 +60,6 @@ def CheckFileName(fileName: str):
 
 
 
-
 class File:
     def __init__(self, name: str=None, loadData:dict=None):
         if loadData != None:
@@ -74,7 +73,7 @@ class File:
 
 
     def Rename(self, newName: str):
-        if self.name == NAME_rootDir:
+        if self.name == NAME_ROOT_DIR:
             raise FsError(ERROR_IS_ROOT_PATH, PurePath('/'))
 
         if type(newName) != str:
@@ -90,20 +89,20 @@ class File:
 
     def Pack(self):
         data = {
-            PACK_TAG_type: CLASS_TAG[type(self)],
-            PACK_TAG_name: self.name,
-            PACK_TAG_info: self.info,
+            PACK_TAG_TYPE: CLASS_TAG[type(self)],
+            PACK_TAG_NAME: self.name,
+            PACK_TAG_INFO: self.info,
         }
 
         return data
 
 
     def __Load(self, data):
-        if TAG_CLASS[data[PACK_TAG_type]] != type(self):
+        if TAG_CLASS[data[PACK_TAG_TYPE]] != type(self):
             pass
-            # raise FsError(ERROR_TYPE_ERROR, data[PACK_TAG_type], (CLASS_TAG[type(self)],))
-        self.name = data[PACK_TAG_name]
-        self.info = data[PACK_TAG_info]
+            # raise FsError(ERROR_TYPE_ERROR, data[PACK_TAG_TYPE], (CLASS_TAG[type(self)],))
+        self.name = data[PACK_TAG_NAME]
+        self.info = data[PACK_TAG_INFO]
 
 
 
@@ -121,46 +120,46 @@ class Dir(File):
         subFilesData = []
         for sFile in self.subFiles:
             subFilesData.append(sFile.Pack())
-        data[PACK_TAG_subFiles] = subFilesData
+        data[PACK_TAG_SUBFILES] = subFilesData
 
         return data
 
 
     def __Load(self, data):
-        subFilesData = data[PACK_TAG_subFiles]
+        subFilesData = data[PACK_TAG_SUBFILES]
         for fileData in subFilesData:
-            type_ = TAG_CLASS[fileData[PACK_TAG_type]]
+            type_ = TAG_CLASS[fileData[PACK_TAG_TYPE]]
             obj = type_(loadData=fileData)
             self.subFiles.append(obj)
 
 
 
 TAG_CLASS = {
-    PACK_TAG_TYPE_Dir: Dir,
-    PACK_TAG_TYPE_File: File
+    PACK_TAG_TYPE_DIR: Dir,
+    PACK_TAG_TYPE_FILE: File
 }
 
 CLASS_TAG = {v:k for k,v in TAG_CLASS.items()}
 
 
 
-class FsManager:
-    def __init__(self, loadData:dict=None):
+class FsManagerBasic:
+    def __init__(self, loadData: dict=None):
         if loadData is not None:
-            fileTree = loadData[PACK_TAG_fileTree]
+            fileTree = loadData[PACK_TAG_FILE_TREE]
             self.rootDir = Dir(loadData=fileTree)
 
         else:
             # 创建根目录
             rootDir = Dir()
-            rootDir.name = NAME_rootDir
+            rootDir.name = NAME_ROOT_DIR
             self.rootDir = rootDir
 
 
     def PackData(self):
         data = {
-            PACK_TAG_fs_type: PACK_TAG_FS_TYPE_normal,
-            PACK_TAG_fileTree: self.rootDir.Pack()
+            PACK_TAG_FS_TYPE: None, # 保留字段
+            PACK_TAG_FILE_TREE: self.rootDir.Pack()
         }
 
         return data
@@ -307,6 +306,13 @@ class FsManager:
         return targetFile
 
 
+import json.decoder
 
-
-
+__all__ = ['SplitPath',
+           'IsRootPath',
+           'CheckFileName',
+           'File',
+           'Dir',
+           'FsManagerBasic',
+           'FsError'
+           ]
